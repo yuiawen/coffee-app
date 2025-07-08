@@ -2,15 +2,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 
 interface CoffeeCardProps {
-  id?: number;
+  id: number;
   name: string;
   description: string;
   price: number;
-  image?: string;
+  image_url?: string;
   onViewDetail?: (id: number) => void;
 }
 
-const CoffeeCard = ({ id, name, description, price, image, onViewDetail }: CoffeeCardProps) => {
+const CoffeeCard = ({ id, name, description, price, image_url, onViewDetail }: CoffeeCardProps) => {
   // Format price to Indonesian Rupiah
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -22,9 +22,9 @@ const CoffeeCard = ({ id, name, description, price, image, onViewDetail }: Coffe
   return (
     <Card className="overflow-hidden hover:shadow-warm transition-all duration-300 hover:-translate-y-1 bg-card border-border">
       <div className="aspect-square overflow-hidden bg-coffee-light">
-        {image ? (
+        {image_url ? (
           <img 
-            src={image} 
+            src={image_url} 
             alt={name}
             className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
           />

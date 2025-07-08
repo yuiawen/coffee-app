@@ -15,53 +15,27 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-
-// Dummy data - akan diganti dengan API calls
-const dummyCoffees = [
-  {
-    id: 1,
-    name: "Espresso",
-    description: "Kopi hitam pekat dengan cita rasa yang kuat dan aromatis",
-    price: 15000,
-    category: "Classic",
-    created_at: "2024-01-15"
-  },
-  {
-    id: 2,
-    name: "Cappuccino",
-    description: "Perpaduan espresso dengan steamed milk yang creamy",
-    price: 22000,
-    category: "Milk Based",
-    created_at: "2024-01-16"
-  },
-  {
-    id: 3,
-    name: "Latte",
-    description: "Espresso dengan susu panas yang lembut dan foam tipis",
-    price: 25000,
-    category: "Milk Based",
-    created_at: "2024-01-17"
-  }
-];
+import { apiService, Coffee } from "@/services/api";
 
 const CoffeeManagement = () => {
   const navigate = useNavigate();
   const { action, id } = useParams();
   const { toast } = useToast();
   
-  const [coffees, setCoffees] = useState(dummyCoffees);
+  const [coffees, setCoffees] = useState<Coffee[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     price: "",
-    category: "Classic"
+    category: "Classic",
+    image: null as File | null
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
     // Check admin authentication
-    const token = localStorage.getItem('admin_token');
-    if (!token) {
+    if (!apiService.isAuthenticated()) {
       toast({
         title: "Akses Ditolak",
         description: "Silakan login sebagai admin",
@@ -71,20 +45,41 @@ const CoffeeManagement = () => {
       return;
     }
 
+    // Load coffees data
+    const fetchCoffees = async () => {
+      try {
+        setIsLoadingData(true);
+        const data = await apiService.getCoffees();
+        setCoffees(data);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Gagal memuat data kopi",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+
+    fetchCoffees();
+  }, [navigate, toast]);
+
+  useEffect(() => {
     // Load coffee data for editing
-    if (action === 'edit' && id) {
-      // Placeholder for API call: const coffee = await fetch(`/api/coffees/${id}`)
+    if (action === 'edit' && id && coffees.length > 0) {
       const coffee = coffees.find(c => c.id === parseInt(id));
       if (coffee) {
         setFormData({
           name: coffee.name,
           description: coffee.description,
           price: coffee.price.toString(),
-          category: coffee.category
+          category: coffee.category || "Classic",
+          image: null
         });
       }
     }
-  }, [action, id, navigate, toast, coffees]);
+  }, [action, id, coffees]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -100,56 +95,27 @@ const CoffeeManagement = () => {
 
     try {
       if (action === 'add') {
-        // Placeholder for API call to CodeIgniter 4
-        // const response = await fetch('http://localhost:8080/api/coffees', {
-        //   method: 'POST',
-        //   headers: {
-        //     'Content-Type': 'application/json',
-        //     'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
-        //   },
-        //   body: JSON.stringify({
-        //     name: formData.name,
-        //     description: formData.description,
-        //     price: parseInt(formData.price)
-        //   })
-        // });
+        const formDataObj = new FormData();
+        formDataObj.append('name', formData.name);
+        formDataObj.append('description', formData.description);
+        formDataObj.append('price', formData.price);
+        if (formData.image) {
+          formDataObj.append('image', formData.image);
+        }
 
-        // Simulate adding new coffee
-        const newCoffee = {
-          id: coffees.length + 1,
-          name: formData.name,
-          description: formData.description,
-          price: parseInt(formData.price),
-          category: formData.category,
-          created_at: new Date().toISOString().split('T')[0]
-        };
-        setCoffees(prev => [...prev, newCoffee]);
-
+        await apiService.createCoffee(formDataObj);
+        
         toast({
           title: "Produk Ditambahkan",
           description: `${formData.name} berhasil ditambahkan ke katalog`
         });
       } else if (action === 'edit' && id) {
-        // Placeholder for API call
-        // const response = await fetch(`http://localhost:8080/api/coffees/${id}`, {
-        //   method: 'PUT',
-        //   headers: {
-        //     'Content-Type': 'application/json',
-        //     'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
-        //   },
-        //   body: JSON.stringify({
-        //     name: formData.name,
-        //     description: formData.description,
-        //     price: parseInt(formData.price)
-        //   })
-        // });
-
-        // Simulate editing coffee
-        setCoffees(prev => prev.map(coffee => 
-          coffee.id === parseInt(id) 
-            ? { ...coffee, ...formData, price: parseInt(formData.price) }
-            : coffee
-        ));
+        await apiService.updateCoffee(parseInt(id), {
+          name: formData.name,
+          description: formData.description,
+          price: parseInt(formData.price),
+          category: formData.category
+        });
 
         toast({
           title: "Produk Diperbarui",
@@ -173,14 +139,7 @@ const CoffeeManagement = () => {
     if (!confirm(`Apakah Anda yakin ingin menghapus ${coffeeName}?`)) return;
 
     try {
-      // Placeholder for API call
-      // await fetch(`http://localhost:8080/api/coffees/${coffeeId}`, {
-      //   method: 'DELETE',
-      //   headers: {
-      //     'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
-      //   }
-      // });
-
+      await apiService.deleteCoffee(coffeeId);
       setCoffees(prev => prev.filter(coffee => coffee.id !== coffeeId));
       
       toast({
@@ -309,6 +268,18 @@ const CoffeeManagement = () => {
                       <option value="Cold Brew">Cold Brew</option>
                     </select>
                   </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="image">Gambar Produk</Label>
+                  <Input
+                    id="image"
+                    name="image"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setFormData(prev => ({...prev, image: e.target.files?.[0] || null}))}
+                    className="border-coffee-light focus:border-coffee-primary"
+                  />
                 </div>
 
                 <div className="flex space-x-4">

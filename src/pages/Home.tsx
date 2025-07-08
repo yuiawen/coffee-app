@@ -3,37 +3,39 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import CoffeeCard from "@/components/CoffeeCard";
 import heroImage from "@/assets/hero-coffee.jpg";
-
-// Dummy data - akan diganti dengan data dari API CodeIgniter 4
-const featuredCoffees = [
-  {
-    id: 1,
-    name: "Espresso",
-    description: "Kopi hitam pekat dengan cita rasa yang kuat dan aromatis",
-    price: 15000
-  },
-  {
-    id: 2,
-    name: "Cappuccino",
-    description: "Perpaduan espresso dengan steamed milk yang creamy",
-    price: 22000
-  },
-  {
-    id: 3,
-    name: "Latte",
-    description: "Espresso dengan susu panas yang lembut dan foam tipis",
-    price: 25000
-  },
-  {
-    id: 4,
-    name: "Americano",
-    description: "Espresso yang dicampur dengan air panas",
-    price: 18000
-  }
-];
+import { apiService, Coffee } from "@/services/api";
+import { useToast } from "@/hooks/use-toast";
 
 const Home = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [featuredCoffees, setFeaturedCoffees] = useState<Coffee[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchFeaturedCoffees = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const coffees = await apiService.getCoffees();
+        // Show only first 4 coffees as featured
+        setFeaturedCoffees(coffees.slice(0, 4));
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load coffees';
+        setError(errorMessage);
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchFeaturedCoffees();
+  }, [toast]);
 
   const handleViewDetail = (id: number) => {
     navigate(`/menu/${id}`);
@@ -93,20 +95,45 @@ const Home = () => {
           </div>
 
           {/* Products Grid */}
-          {/* Placeholder for dynamic data loop: <?php foreach($featured_coffees as $kopi): ?> */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-            {featuredCoffees.map((coffee) => (
-              <CoffeeCard
-                key={coffee.id}
-                id={coffee.id}
-                name={coffee.name}
-                description={coffee.description}
-                price={coffee.price}
-                onViewDetail={handleViewDetail}
-              />
-            ))}
-          </div>
-          {/* End placeholder: <?php endforeach; ?> */}
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+              {[...Array(4)].map((_, index) => (
+                <div key={index} className="bg-card border-border rounded-lg p-6 animate-pulse">
+                  <div className="aspect-square bg-coffee-light/30 rounded-lg mb-4"></div>
+                  <div className="h-4 bg-coffee-light/30 rounded mb-2"></div>
+                  <div className="h-3 bg-coffee-light/20 rounded mb-4"></div>
+                  <div className="h-6 bg-coffee-light/30 rounded"></div>
+                </div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <p className="text-lg text-muted-foreground mb-4">
+                Gagal memuat produk: {error}
+              </p>
+              <Button 
+                variant="outline"
+                onClick={() => window.location.reload()}
+                className="border-coffee-primary text-coffee-primary hover:bg-coffee-primary hover:text-coffee-cream"
+              >
+                Coba Lagi
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+              {featuredCoffees.map((coffee) => (
+                <CoffeeCard
+                  key={coffee.id}
+                  id={coffee.id}
+                  name={coffee.name}
+                  description={coffee.description}
+                  price={coffee.price}
+                  image_url={coffee.image_url}
+                  onViewDetail={handleViewDetail}
+                />
+              ))}
+            </div>
+          )}
 
           <div className="text-center">
             <Button 

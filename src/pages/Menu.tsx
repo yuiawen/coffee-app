@@ -4,84 +4,71 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import CoffeeCard from "@/components/CoffeeCard";
-
-// Dummy data - akan diganti dengan API calls ke CodeIgniter 4
-const coffeeMenu = [
-  {
-    id: 1,
-    name: "Espresso",
-    description: "Kopi hitam pekat dengan cita rasa yang kuat dan aromatis. Dibuat dari biji kopi pilihan yang disangrai sempurna.",
-    price: 15000,
-    category: "Classic",
-    ingredients: ["Espresso shot", "Hot water"],
-    caffeine: "High"
-  },
-  {
-    id: 2,
-    name: "Cappuccino",
-    description: "Perpaduan espresso dengan steamed milk yang creamy dan foam susu yang lembut. Cocok untuk pecinta kopi dengan tekstur halus.",
-    price: 22000,
-    category: "Milk Based",
-    ingredients: ["Espresso shot", "Steamed milk", "Milk foam"],
-    caffeine: "Medium"
-  },
-  {
-    id: 3,
-    name: "Latte",
-    description: "Espresso dengan susu panas yang lembut dan foam tipis. Rasa kopi yang balance dengan kelembutan susu.",
-    price: 25000,
-    category: "Milk Based",
-    ingredients: ["Espresso shot", "Steamed milk", "Light foam"],
-    caffeine: "Medium"
-  },
-  {
-    id: 4,
-    name: "Americano",
-    description: "Espresso yang dicampur dengan air panas. Memberikan rasa kopi yang kuat namun tidak terlalu pekat.",
-    price: 18000,
-    category: "Classic",
-    ingredients: ["Espresso shot", "Hot water"],
-    caffeine: "High"
-  },
-  {
-    id: 5,
-    name: "Mocha",
-    description: "Kombinasi espresso, susu, dan cokelat yang menghasilkan rasa manis dan creamy. Perfect untuk pecinta cokelat.",
-    price: 28000,
-    category: "Specialty",
-    ingredients: ["Espresso shot", "Steamed milk", "Chocolate syrup", "Whipped cream"],
-    caffeine: "Medium"
-  },
-  {
-    id: 6,
-    name: "Macchiato",
-    description: "Espresso dengan sedikit susu foam di atasnya. Memberikan kontras rasa yang unik antara pahit dan creamy.",
-    price: 20000,
-    category: "Classic",
-    ingredients: ["Espresso shot", "Milk foam"],
-    caffeine: "High"
-  }
-];
+import { apiService, Coffee } from "@/services/api";
+import { useToast } from "@/hooks/use-toast";
 
 const Menu = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const [selectedCoffee, setSelectedCoffee] = useState<any>(null);
+  const { toast } = useToast();
+  
+  const [selectedCoffee, setSelectedCoffee] = useState<Coffee | null>(null);
+  const [coffees, setCoffees] = useState<Coffee[]>([]);
   const [filter, setFilter] = useState("All");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const categories = ["All", "Classic", "Milk Based", "Specialty"];
 
   useEffect(() => {
-    if (id) {
-      // Placeholder for API call: const coffee = await fetch(`/api/coffees/${id}`)
-      const coffee = coffeeMenu.find(c => c.id === parseInt(id));
-      setSelectedCoffee(coffee);
+    const fetchCoffees = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const data = await apiService.getCoffees();
+        setCoffees(data);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load coffees';
+        setError(errorMessage);
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCoffees();
+  }, [toast]);
+
+  useEffect(() => {
+    if (id && coffees.length > 0) {
+      const fetchCoffeeDetail = async () => {
+        try {
+          const coffee = await apiService.getCoffeeById(parseInt(id));
+          setSelectedCoffee(coffee);
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : 'Failed to load coffee details';
+          toast({
+            title: "Error",
+            description: errorMessage,
+            variant: "destructive"
+          });
+          // Fallback to client-side filtering if API call fails
+          const foundCoffee = coffees.find(c => c.id === parseInt(id));
+          setSelectedCoffee(foundCoffee || null);
+        }
+      };
+
+      fetchCoffeeDetail();
     }
-  }, [id]);
+  }, [id, coffees, toast]);
 
   const filteredMenu = filter === "All" 
-    ? coffeeMenu 
-    : coffeeMenu.filter(coffee => coffee.category === filter);
+    ? coffees 
+    : coffees.filter(coffee => coffee.category === filter);
 
   const handleViewDetail = (coffeeId: number) => {
     navigate(`/menu/${coffeeId}`);
@@ -107,8 +94,16 @@ const Menu = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             {/* Image */}
-            <div className="aspect-square bg-gradient-warm rounded-2xl flex items-center justify-center shadow-warm">
-              <span className="text-8xl">☕</span>
+            <div className="aspect-square bg-gradient-warm rounded-2xl flex items-center justify-center shadow-warm overflow-hidden">
+              {selectedCoffee.image_url ? (
+                <img 
+                  src={selectedCoffee.image_url} 
+                  alt={selectedCoffee.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-8xl">☕</span>
+              )}
             </div>
 
             {/* Details */}
@@ -129,24 +124,25 @@ const Menu = () => {
               </div>
 
               <div className="space-y-4">
-                <div>
-                  <h3 className="font-semibold text-coffee-primary mb-2">Komposisi:</h3>
-                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                    {/* Placeholder: <?php foreach($kopi['ingredients'] as $ingredient): ?> */}
-                    {selectedCoffee.ingredients.map((ingredient: string, index: number) => (
-                      <li key={index}>{ingredient}</li>
-                    ))}
-                    {/* Placeholder: <?php endforeach; ?> */}
-                  </ul>
-                </div>
+                {selectedCoffee.ingredients && selectedCoffee.ingredients.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-coffee-primary mb-2">Komposisi:</h3>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                      {selectedCoffee.ingredients.map((ingredient: string, index: number) => (
+                        <li key={index}>{ingredient}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-                <div>
-                  <h3 className="font-semibold text-coffee-primary mb-2">Level Kafein:</h3>
-                  <Badge variant={selectedCoffee.caffeine === 'High' ? 'destructive' : 'default'}>
-                    {/* Placeholder: <?= $kopi['caffeine'] ?> */}
-                    {selectedCoffee.caffeine}
-                  </Badge>
-                </div>
+                {selectedCoffee.caffeine && (
+                  <div>
+                    <h3 className="font-semibold text-coffee-primary mb-2">Level Kafein:</h3>
+                    <Badge variant={selectedCoffee.caffeine === 'High' ? 'destructive' : 'default'}>
+                      {selectedCoffee.caffeine}
+                    </Badge>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-between pt-6 border-t border-border">
@@ -201,22 +197,47 @@ const Menu = () => {
         </div>
 
         {/* Coffee Grid */}
-        {/* Placeholder for dynamic data: <?php foreach($coffees as $kopi): ?> */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {filteredMenu.map((coffee) => (
-            <CoffeeCard
-              key={coffee.id}
-              id={coffee.id}
-              name={coffee.name}
-              description={coffee.description}
-              price={coffee.price}
-              onViewDetail={handleViewDetail}
-            />
-          ))}
-        </div>
-        {/* End placeholder: <?php endforeach; ?> */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {[...Array(8)].map((_, index) => (
+              <div key={index} className="bg-card border-border rounded-lg p-6 animate-pulse">
+                <div className="aspect-square bg-coffee-light/30 rounded-lg mb-4"></div>
+                <div className="h-4 bg-coffee-light/30 rounded mb-2"></div>
+                <div className="h-3 bg-coffee-light/20 rounded mb-4"></div>
+                <div className="h-6 bg-coffee-light/30 rounded"></div>
+              </div>
+            ))}
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-lg text-muted-foreground mb-4">
+              Gagal memuat menu: {error}
+            </p>
+            <Button 
+              variant="outline"
+              onClick={() => window.location.reload()}
+              className="border-coffee-primary text-coffee-primary hover:bg-coffee-primary hover:text-coffee-cream"
+            >
+              Coba Lagi
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {filteredMenu.map((coffee) => (
+              <CoffeeCard
+                key={coffee.id}
+                id={coffee.id}
+                name={coffee.name}
+                description={coffee.description}
+                price={coffee.price}
+                image_url={coffee.image_url}
+                onViewDetail={handleViewDetail}
+              />
+            ))}
+          </div>
+        )}
 
-        {filteredMenu.length === 0 && (
+        {!isLoading && !error && filteredMenu.length === 0 && (
           <div className="text-center py-12">
             <p className="text-lg text-muted-foreground mb-4">
               Tidak ada produk dalam kategori ini.

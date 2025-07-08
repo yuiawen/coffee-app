@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { apiService } from "@/services/api";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -21,6 +22,8 @@ const AdminLogin = () => {
     password: "",
     confirmPassword: ""
   });
+
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -40,20 +43,12 @@ const AdminLogin = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
     try {
-      // Placeholder for API call to CodeIgniter 4
-      // const response = await fetch('http://localhost:8080/api/login', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(loginData)
-      // });
+      const result = await apiService.login(loginData.username, loginData.password);
       
-      // Simulate successful login
-      if (loginData.username && loginData.password) {
-        // Store token in localStorage (placeholder)
-        // localStorage.setItem('admin_token', response.token);
-        localStorage.setItem('admin_token', 'dummy_token_for_demo');
+      if (result.success) {
         localStorage.setItem('admin_user', loginData.username);
         
         toast({
@@ -63,19 +58,23 @@ const AdminLogin = () => {
         
         navigate('/admin/dashboard');
       } else {
-        throw new Error('Username dan password harus diisi');
+        throw new Error(result.message || 'Login gagal');
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Username atau password salah';
       toast({
         title: "Login Gagal",
-        description: "Username atau password salah",
+        description: errorMessage,
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
     if (registerData.password !== registerData.confirmPassword) {
       toast({
@@ -83,37 +82,37 @@ const AdminLogin = () => {
         description: "Password tidak cocok",
         variant: "destructive"
       });
+      setIsLoading(false);
       return;
     }
 
     try {
-      // Placeholder for API call to CodeIgniter 4
-      // const response = await fetch('http://localhost:8080/api/register', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     username: registerData.username,
-      //     password: registerData.password
-      //   })
-      // });
+      const result = await apiService.register(registerData.username, registerData.password);
+      
+      if (result.success) {
+        toast({
+          title: "Registrasi Berhasil!",
+          description: "Akun admin telah dibuat. Silakan login.",
+        });
 
-      toast({
-        title: "Registrasi Berhasil!",
-        description: "Akun admin telah dibuat. Silakan login.",
-      });
-
-      // Reset form
-      setRegisterData({
-        username: "",
-        password: "",
-        confirmPassword: ""
-      });
+        // Reset form
+        setRegisterData({
+          username: "",
+          password: "",
+          confirmPassword: ""
+        });
+      } else {
+        throw new Error(result.message || 'Registrasi gagal');
+      }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat membuat akun';
       toast({
         title: "Registrasi Gagal",
-        description: "Terjadi kesalahan saat membuat akun",
+        description: errorMessage,
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -178,10 +177,11 @@ const AdminLogin = () => {
                     />
                   </div>
                   <Button 
-                    type="submit" 
+                    type="submit"
+                    disabled={isLoading}
                     className="w-full bg-gradient-coffee shadow-coffee"
                   >
-                    Login
+                    {isLoading ? 'Memproses...' : 'Login'}
                   </Button>
                 </form>
               </CardContent>
@@ -236,10 +236,11 @@ const AdminLogin = () => {
                     />
                   </div>
                   <Button 
-                    type="submit" 
+                    type="submit"
+                    disabled={isLoading}
                     className="w-full bg-gradient-coffee shadow-coffee"
                   >
-                    Register
+                    {isLoading ? 'Memproses...' : 'Register'}
                   </Button>
                 </form>
               </CardContent>
