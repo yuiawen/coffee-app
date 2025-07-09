@@ -26,7 +26,7 @@ const Navbar = () => {
               <span className="text-primary-foreground font-bold text-sm">☕</span>
             </div>
             <span className="font-heading text-xl font-bold text-coffee-primary">
-              KopiKata
+              Caffè Lento
             </span>
           </Link>
 

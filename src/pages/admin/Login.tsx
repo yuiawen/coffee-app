@@ -126,7 +126,7 @@ const AdminLogin = () => {
               <span className="text-coffee-primary font-bold text-lg">☕</span>
             </div>
             <span className="font-heading text-2xl font-bold text-coffee-cream">
-              KopiKata Admin
+              Caffè Lento Admin
             </span>
           </div>
           <p className="text-coffee-cream/80">

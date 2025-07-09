@@ -11,7 +11,7 @@ const Footer = () => {
               <div className="w-8 h-8 bg-coffee-cream rounded-full flex items-center justify-center">
                 <span className="text-coffee-primary font-bold text-sm">☕</span>
               </div>
-              <span className="font-heading text-xl font-bold">KopiKata</span>
+              <span className="font-heading text-xl font-bold">Caffè Lento</span>
             </div>
             <p className="text-coffee-light text-sm">
               Menghadirkan cita rasa kopi terbaik untuk setiap momen istimewa Anda.

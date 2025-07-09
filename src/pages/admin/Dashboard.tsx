@@ -82,7 +82,7 @@ const AdminDashboard = () => {
                 <span className="text-coffee-primary font-bold text-sm">☕</span>
               </div>
               <div>
-                <h1 className="font-heading text-xl font-bold">KopiKata Admin</h1>
+                <h1 className="font-heading text-xl font-bold">Caffè Lento Admin</h1>
                 <p className="text-sm text-coffee-light">Panel Manajemen</p>
               </div>
             </div>

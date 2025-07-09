@@ -5,7 +5,7 @@ const About = () => {
         {/* Header */}
         <div className="text-center mb-16">
           <h1 className="font-heading text-4xl md:text-5xl font-bold text-coffee-primary mb-4">
-            Tentang KopiKata
+            Tentang Caffè Lento
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Perjalanan kami dalam menghadirkan pengalaman kopi terbaik untuk Indonesia
