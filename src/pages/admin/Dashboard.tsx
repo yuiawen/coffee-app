@@ -169,17 +169,26 @@ const AdminDashboard = () => {
             <CardContent className="space-y-4">
               <Button 
                 className="w-full bg-gradient-coffee shadow-coffee"
-                onClick={() => navigate('/admin/coffees')}
+                onClick={() => navigate('/admin/products')}
               >
-                Kelola Produk Kopi
+                Kelola Semua Produk
               </Button>
-              <Button 
-                variant="outline" 
-                className="w-full border-coffee-primary text-coffee-primary hover:bg-coffee-primary hover:text-coffee-cream"
-                onClick={() => navigate('/admin/coffees/add')}
-              >
-                Tambah Produk Baru
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button 
+                  variant="outline" 
+                  className="border-coffee-primary text-coffee-primary hover:bg-coffee-primary hover:text-coffee-cream"
+                  onClick={() => navigate('/admin/products/coffees')}
+                >
+                  ☕ Minuman
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="border-coffee-primary text-coffee-primary hover:bg-coffee-primary hover:text-coffee-cream"
+                  onClick={() => navigate('/admin/products/foods')}
+                >
+                  🍽️ Makanan
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -237,7 +246,7 @@ const AdminDashboard = () => {
                 <Button 
                   variant="outline"
                   className="h-20 flex flex-col items-center justify-center border-coffee-primary text-coffee-primary hover:bg-coffee-primary hover:text-coffee-cream"
-                  onClick={() => navigate('/admin/coffees')}
+                  onClick={() => navigate('/admin/products')}
                 >
                   <span className="text-2xl mb-1">☕</span>
                   <span className="text-sm">Produk</span>

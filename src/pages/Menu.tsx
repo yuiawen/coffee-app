@@ -3,32 +3,39 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import CoffeeCard from "@/components/CoffeeCard";
-import { apiService, Coffee } from "@/services/api";
+import MenuCard from "@/components/MenuCard";
+import { apiService, Coffee, Food } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 
 const Menu = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { type, id } = useParams();
   const { toast } = useToast();
   
-  const [selectedCoffee, setSelectedCoffee] = useState<Coffee | null>(null);
+  const [selectedItem, setSelectedItem] = useState<Coffee | Food | null>(null);
   const [coffees, setCoffees] = useState<Coffee[]>([]);
+  const [foods, setFoods] = useState<Food[]>([]);
+  const [activeTab, setActiveTab] = useState<'drinks' | 'foods'>('drinks');
   const [filter, setFilter] = useState("All");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const categories = ["All", "Classic", "Milk Based", "Specialty"];
+  const drinkCategories = ["All", "Classic", "Milk Based", "Specialty"];
+  const foodCategories = ["All", "Pastries", "Sandwiches", "Rice Bowl", "Heavy Meals"];
 
   useEffect(() => {
-    const fetchCoffees = async () => {
+    const fetchMenuItems = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const data = await apiService.getCoffees();
-        setCoffees(data);
+        const [coffeesData, foodsData] = await Promise.all([
+          apiService.getCoffees(),
+          apiService.getFoods()
+        ]);
+        setCoffees(coffeesData);
+        setFoods(foodsData);
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load coffees';
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load menu items';
         setError(errorMessage);
         toast({
           title: "Error",
@@ -40,47 +47,61 @@ const Menu = () => {
       }
     };
 
-    fetchCoffees();
+    fetchMenuItems();
   }, [toast]);
 
   useEffect(() => {
-    if (id && coffees.length > 0) {
-      const fetchCoffeeDetail = async () => {
+    if (type && id && (coffees.length > 0 || foods.length > 0)) {
+      const fetchItemDetail = async () => {
         try {
-          const coffee = await apiService.getCoffeeById(parseInt(id));
-          setSelectedCoffee(coffee);
+          if (type === 'coffee') {
+            const coffee = await apiService.getCoffeeById(parseInt(id));
+            setSelectedItem(coffee);
+          } else if (type === 'food') {
+            const food = await apiService.getFoodById(parseInt(id));
+            setSelectedItem(food);
+          }
         } catch (err) {
-          const errorMessage = err instanceof Error ? err.message : 'Failed to load coffee details';
+          const errorMessage = err instanceof Error ? err.message : 'Failed to load item details';
           toast({
             title: "Error",
             description: errorMessage,
             variant: "destructive"
           });
           // Fallback to client-side filtering if API call fails
-          const foundCoffee = coffees.find(c => c.id === parseInt(id));
-          setSelectedCoffee(foundCoffee || null);
+          if (type === 'coffee') {
+            const foundCoffee = coffees.find(c => c.id === parseInt(id));
+            setSelectedItem(foundCoffee || null);
+          } else if (type === 'food') {
+            const foundFood = foods.find(f => f.id === parseInt(id));
+            setSelectedItem(foundFood || null);
+          }
         }
       };
 
-      fetchCoffeeDetail();
+      fetchItemDetail();
     }
-  }, [id, coffees, toast]);
+  }, [type, id, coffees, foods, toast]);
 
-  const filteredMenu = filter === "All" 
+  const filteredDrinks = filter === "All" 
     ? coffees 
     : coffees.filter(coffee => coffee.category === filter);
+    
+  const filteredFoods = filter === "All" 
+    ? foods 
+    : foods.filter(food => food.category === filter);
 
-  const handleViewDetail = (coffeeId: number) => {
-    navigate(`/menu/${coffeeId}`);
+  const handleViewDetail = (itemId: number, itemType: 'coffee' | 'food') => {
+    navigate(`/menu/${itemType}/${itemId}`);
   };
 
   const handleBackToMenu = () => {
     navigate('/menu');
-    setSelectedCoffee(null);
+    setSelectedItem(null);
   };
 
-  // Detail view for specific coffee
-  if (selectedCoffee) {
+  // Detail view for specific item
+  if (selectedItem) {
     return (
       <div className="min-h-screen bg-background py-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -95,51 +116,50 @@ const Menu = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             {/* Image */}
             <div className="aspect-square bg-gradient-warm rounded-2xl flex items-center justify-center shadow-warm overflow-hidden">
-              {selectedCoffee.image_url ? (
+              {selectedItem.image_url ? (
                 <img 
-                  src={selectedCoffee.image_url} 
-                  alt={selectedCoffee.name}
+                  src={selectedItem.image_url} 
+                  alt={selectedItem.name}
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span className="text-8xl">☕</span>
+                <span className="text-8xl">{type === 'coffee' ? '☕' : '🍽️'}</span>
               )}
             </div>
 
             {/* Details */}
             <div className="space-y-6">
               <div>
-                <Badge variant="secondary" className="mb-4">
-                  {/* Placeholder: <?= $kopi['category'] ?> */}
-                  {selectedCoffee.category}
-                </Badge>
+                {'category' in selectedItem && (
+                  <Badge variant="secondary" className="mb-4">
+                    {selectedItem.category}
+                  </Badge>
+                )}
                 <h1 className="font-heading text-4xl font-bold text-coffee-primary mb-4">
-                  {/* Placeholder: <?= $kopi['name'] ?> */}
-                  {selectedCoffee.name}
+                  {selectedItem.name}
                 </h1>
                 <p className="text-lg text-muted-foreground mb-6">
-                  {/* Placeholder: <?= $kopi['description'] ?> */}
-                  {selectedCoffee.description}
+                  {selectedItem.description}
                 </p>
               </div>
 
               <div className="space-y-4">
-                {selectedCoffee.ingredients && selectedCoffee.ingredients.length > 0 && (
+                {'ingredients' in selectedItem && selectedItem.ingredients && selectedItem.ingredients.length > 0 && (
                   <div>
                     <h3 className="font-semibold text-coffee-primary mb-2">Komposisi:</h3>
                     <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                      {selectedCoffee.ingredients.map((ingredient: string, index: number) => (
+                      {selectedItem.ingredients.map((ingredient: string, index: number) => (
                         <li key={index}>{ingredient}</li>
                       ))}
                     </ul>
                   </div>
                 )}
 
-                {selectedCoffee.caffeine && (
+                {'caffeine' in selectedItem && selectedItem.caffeine && (
                   <div>
                     <h3 className="font-semibold text-coffee-primary mb-2">Level Kafein:</h3>
-                    <Badge variant={selectedCoffee.caffeine === 'High' ? 'destructive' : 'default'}>
-                      {selectedCoffee.caffeine}
+                    <Badge variant={selectedItem.caffeine === 'High' ? 'destructive' : 'default'}>
+                      {selectedItem.caffeine}
                     </Badge>
                   </div>
                 )}
@@ -147,11 +167,10 @@ const Menu = () => {
 
               <div className="flex items-center justify-between pt-6 border-t border-border">
                 <div className="text-3xl font-bold text-coffee-primary">
-                  {/* Placeholder: Rp <?= number_format($kopi['price'], 0, ',', '.') ?> */}
                   {new Intl.NumberFormat('id-ID', {
                     style: 'currency',
                     currency: 'IDR'
-                  }).format(selectedCoffee.price)}
+                  }).format(selectedItem.price)}
                 </div>
                 <Button size="lg" className="bg-gradient-coffee shadow-coffee">
                   Pesan Sekarang
@@ -171,17 +190,43 @@ const Menu = () => {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="font-heading text-4xl md:text-5xl font-bold text-coffee-primary mb-4">
-            Menu Kopi Kami
+            Menu Lengkap Kami
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Jelajahi koleksi lengkap minuman kopi premium kami. 
-            Setiap varian dibuat dengan biji kopi berkualitas tinggi dan cinta.
+            Jelajahi koleksi lengkap minuman dan makanan premium kami. 
+            Setiap sajian dibuat dengan bahan berkualitas tinggi dan penuh dedikasi.
           </p>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex justify-center mb-8">
+          <div className="bg-muted p-1 rounded-lg">
+            <Button
+              variant={activeTab === 'drinks' ? 'default' : 'ghost'}
+              onClick={() => {
+                setActiveTab('drinks');
+                setFilter('All');
+              }}
+              className={activeTab === 'drinks' ? 'bg-gradient-coffee shadow-coffee' : ''}
+            >
+              ☕ Minuman
+            </Button>
+            <Button
+              variant={activeTab === 'foods' ? 'default' : 'ghost'}
+              onClick={() => {
+                setActiveTab('foods');
+                setFilter('All');
+              }}
+              className={activeTab === 'foods' ? 'bg-gradient-coffee shadow-coffee' : ''}
+            >
+              🍽️ Makanan
+            </Button>
+          </div>
         </div>
 
         {/* Category Filter */}
         <div className="flex flex-wrap justify-center gap-4 mb-12">
-          {categories.map((category) => (
+          {(activeTab === 'drinks' ? drinkCategories : foodCategories).map((category) => (
             <Button
               key={category}
               variant={filter === category ? "default" : "outline"}
@@ -196,7 +241,7 @@ const Menu = () => {
           ))}
         </div>
 
-        {/* Coffee Grid */}
+        {/* Menu Grid */}
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {[...Array(8)].map((_, index) => (
@@ -222,32 +267,49 @@ const Menu = () => {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {filteredMenu.map((coffee) => (
-              <CoffeeCard
-                key={coffee.id}
-                id={coffee.id}
-                name={coffee.name}
-                description={coffee.description}
-                price={coffee.price}
-                image_url={coffee.image_url}
-                onViewDetail={handleViewDetail}
-              />
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {activeTab === 'drinks' 
+              ? filteredDrinks.map((coffee) => (
+                  <MenuCard
+                    key={`coffee-${coffee.id}`}
+                    id={coffee.id}
+                    name={coffee.name}
+                    description={coffee.description}
+                    price={coffee.price}
+                    image_url={coffee.image_url}
+                    type="coffee"
+                    onViewDetail={handleViewDetail}
+                  />
+                ))
+              : filteredFoods.map((food) => (
+                  <MenuCard
+                    key={`food-${food.id}`}
+                    id={food.id}
+                    name={food.name}
+                    description={food.description}
+                    price={food.price}
+                    image_url={food.image_url}
+                    type="food"
+                    onViewDetail={handleViewDetail}
+                  />
+                ))
+            }
           </div>
         )}
 
-        {!isLoading && !error && filteredMenu.length === 0 && (
+        {!isLoading && !error && 
+         ((activeTab === 'drinks' && filteredDrinks.length === 0) ||
+          (activeTab === 'foods' && filteredFoods.length === 0)) && (
           <div className="text-center py-12">
             <p className="text-lg text-muted-foreground mb-4">
-              Tidak ada produk dalam kategori ini.
+              Tidak ada {activeTab === 'drinks' ? 'minuman' : 'makanan'} dalam kategori ini.
             </p>
             <Button 
               variant="outline"
               onClick={() => setFilter("All")}
               className="border-coffee-primary text-coffee-primary hover:bg-coffee-primary hover:text-coffee-cream"
             >
-              Lihat Semua Menu
+              Lihat Semua {activeTab === 'drinks' ? 'Minuman' : 'Makanan'}
             </Button>
           </div>
         )}
