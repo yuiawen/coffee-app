@@ -1,2 +1,2 @@
 # coffee-app
-Live Demo: https://vercel.com/yuiawens-projects
+Live Demo: https://coffee-app-nu.vercel.app/
